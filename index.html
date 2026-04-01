@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新北市榮富國小教師課表查詢系統</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #1A5276;   /* 深藍 */
+            --secondary-color: #D4AC0D; /* 金黃 */
+            --accent-color: #1E8449;    /* 常青綠 */
+            --bg-color: #F4F7F6;        /* 淺灰綠 */
+            --header-offset: 190px;     /* PC端頂部固定區總高度預估 */
+        }
+
+        body {
+            font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            scroll-behavior: smooth;
+        }
+
+        /* 解決錨點跳轉被固定標頭遮擋的問題 */
+        section[id] {
+            scroll-margin-top: var(--header-offset);
+        }
+
+        /* 固定頂部容器 (頁頭 + 導覽) */
+        .fixed-top-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .branding-header {
+            background: linear-gradient(to right, var(--primary-color) 0%, var(--primary-color) 70%, var(--secondary-color) 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 導覽列容器優化：隱藏捲軸但保持功能 */
+        .nav-scroll-container {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;     /* Firefox */
+        }
+        .nav-scroll-container::-webkit-scrollbar {
+            display: none;             /* Chrome, Safari and Opera */
+        }
+
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+            padding-bottom: 2px;
+            flex-shrink: 0; /* 防止文字被擠壓 */
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+        }
+
+        .teacher-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-top: 5px solid transparent;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .teacher-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        .teacher-name-link {
+            color: var(--primary-color);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .teacher-name-link:hover {
+            color: var(--accent-color);
+            text-decoration: underline;
+        }
+
+        .icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #EBF5FB;
+            color: var(--primary-color);
+            transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .teacher-card:hover .icon-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .icon-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .category-title {
+            color: var(--primary-color);
+            border-left: 6px solid var(--secondary-color);
+            padding-left: 1rem;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+        }
+
+        .sub-category-title {
+            color: var(--accent-color);
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 1rem 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .sub-category-title::before {
+            content: "";
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        #backToTop {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 60;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* 內容區塊初始邊距，避開固定頂部 */
+        main {
+            padding-top: var(--header-offset);
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --header-offset: 145px; /* 手機端標頭較矮 */
+            }
+            .branding-header {
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="fixed-top-container">
+        <header class="branding-header text-white py-4 md:py-6">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center space-x-3 md:space-x-4">
+                    <div class="bg-white p-1 rounded-full shadow-inner flex items-center justify-center overflow-hidden" style="width: 48px; height: 48px; min-width: 48px; md:width: 56px; md:height: 56px;">
+                        <img id="school-logo" src="lfes.png" alt="榮富國小校徽" class="object-contain w-full h-full">
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-lg md:text-3xl font-bold tracking-wider leading-tight">新北市榮富國民小學</h1>
+                        <p class="text-[10px] md:text-sm opacity-90 uppercase tracking-widest">教師及班級課表查詢</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <nav class="bg-white/95 backdrop-blur-sm shadow-md border-b relative">
+            <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent pointer-events-none md:hidden"></div>
+            
+            <div class="container mx-auto px-4 overflow-x-auto whitespace-nowrap py-3 nav-scroll-container">
+                <div class="flex space-x-4 md:space-x-6 justify-start lg:justify-center text-sm md:text-base">
+                    <a href="#grade-1" class="nav-link font-medium text-gray-700">一年級</a>
+                    <a href="#grade-2" class="nav-link font-medium text-gray-700">二年級</a>
+                    <a href="#grade-3" class="nav-link font-medium text-gray-700">三年級</a>
+                    <a href="#grade-4" class="nav-link font-medium text-gray-700">四年級</a>
+                    <a href="#grade-5" class="nav-link font-medium text-gray-700">五年級</a>
+                    <a href="#grade-6" class="nav-link font-medium text-gray-700">六年級</a>
+                    <a href="#specialist" class="nav-link font-medium text-gray-700">科任教師</a>
+                    <a href="#admin" class="nav-link font-medium text-gray-700">行政處室</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+
+    <main class="container mx-auto px-4 pb-20">
+        <div id="data-container">
+            <div class="flex justify-center py-20 text-gray-400">
+                <p>正在載入課表資料...</p>
+            </div>
+        </div>
+    </main>
+
+    <div id="backToTop" title="回到頂端">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+    </div>
+
+    <script>
+        // 讀取外部 CSV 檔案 (取代原本寫死的資料)
+        async function loadData() {
+            try {
+                // 這裡設定您的 CSV 檔名，請確保它與 HTML 檔放在同一個資料夾
+                const response = await fetch('data.csv'); 
+                if (!response.ok) throw new Error('無法讀取檔案');
+                
+                // 解決中文亂碼問題，確保以 UTF-8 讀取 (也可以根據情況改用 big5)
+                const arrayBuffer = await response.arrayBuffer();
+                const decoder = new TextDecoder('utf-8');
+                const text = decoder.decode(arrayBuffer);
+                
+                render(text);
+            } catch (error) {
+                console.error("載入資料失敗:", error);
+                document.getElementById('data-container').innerHTML = `
+                    <div class="flex flex-col items-center py-20 text-red-500">
+                        <p class="text-xl font-bold mb-2">無法讀取教師資料</p>
+                    </div>
+                `;
+            }
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',');
+            return lines.slice(1).map(line => {
+                const values = line.split(',');
+                const obj = {};
+                headers.forEach((h, i) => {
+                    const key = h.trim().replace(/\r$/, '');
+                    // 處理可能帶有 \r 的結尾字元 (Windows 儲存 CSV 的常見問題)
+                    const val = values[i] ? values[i].replace(/\r$/, '').trim() : "";
+                    obj[key] = val;
+                });
+                return obj;
+            });
+        }
+
+        function createTeacherCard(t) {
+            const isClassTeacher = /^[1-6][0-9]{2}$/.test(t.任教班級);
+            const baseUrl = "https://esa.ntpc.edu.tw/web-lsnmgt/templates/timetable_print.html?show_type%3D1%26showsub%3Dlcname%26showcls%3Dclassname%26showprint%3Dhtml%26ss%3DWjZBK2prdkdQNXpmSXhtNnRkT3dCQT09";
+            const timetableUrl = isClassTeacher 
+                ? `${baseUrl}%26picksub%3Dclass%26classid%3D${t.任教班級}`
+                : `${baseUrl}%26picksub%3Dteacher%26teaid%3D${t.教師ID}`;
+
+            const hasWeb = t.教師網頁 && t.教師網頁.trim().startsWith('http');
+            const fullDisplayName = `${t.教師姓名} <span class="text-gray-500 font-normal text-xs md:text-sm ml-1">${t.職稱}</span>`;
+
+            return `
+                <div class="teacher-card p-3 md:p-4 flex flex-col items-center text-center">
+                    <div class="text-[10px] md:text-xs font-bold text-gray-400 mb-1">${t.任教班級 || '&nbsp;'}</div>
+                    <div class="mb-2 md:mb-3">
+                        ${hasWeb 
+                            ? `<a href="${t.教師網頁}" target="_blank" class="teacher-name-link text-base md:text-lg">${fullDisplayName}</a>`
+                            : `<span class="text-base md:text-lg font-bold text-gray-800">${fullDisplayName}</span>`
+                        }
+                    </div>
+                    <a href="${timetableUrl}" target="_blank" class="icon-btn scale-90 md:scale-100" title="查看課表">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z" />
+                        </svg>
+                    </a>
+                </div>
+            `;
+        }
+
+        function render(csvText) {
+            const teachers = parseCSV(csvText);
+            const container = document.getElementById('data-container');
+            container.innerHTML = '';
+            
+            const mainCategories = [
+                { id: 'grade-1', name: '一年級 導師', filter: t => /^[1][0-9]{2}$/.test(t.任教班級), splitByUnit: false },
+                { id: 'grade-2', name: '二年級 導師', filter: t => /^[2][0-9]{2}$/.test(t.任教班級), splitByUnit: false },
+                { id: 'grade-3', name: '三年級 導師', filter: t => /^[3][0-9]{2}$/.test(t.任教班級), splitByUnit: false },
+                { id: 'grade-4', name: '四年級 導師', filter: t => /^[4][0-9]{2}$/.test(t.任教班級), splitByUnit: false },
+                { id: 'grade-5', name: '五年級 導師', filter: t => /^[5][0-9]{2}$/.test(t.任教班級), splitByUnit: false },
+                { id: 'grade-6', name: '六年級 導師', filter: t => /^[6][0-9]{2}$/.test(t.任教班級), splitByUnit: false },
+                { id: 'specialist', name: '科任教師', filter: t => ['英語', '自然', '健體', '音樂', '美勞', '資訊', '社會', '書法', '游泳'].includes(t.任教班級), splitByUnit: true },
+                { id: 'admin', name: '行政處室', filter: t => (t.任教班級 || "").includes('處') || (t.任教班級 || "").includes('室'), splitByUnit: true }
+            ];
+
+            mainCategories.forEach(cat => {
+                const groupMembers = teachers.filter(cat.filter);
+                if (groupMembers.length === 0) return;
+
+                const section = document.createElement('section');
+                section.id = cat.id;
+                section.className = 'mb-12 md:mb-16';
+                
+                let html = `<h2 class="category-title text-xl md:text-2xl">${cat.name}</h2>`;
+
+                if (cat.splitByUnit) {
+                    const units = [...new Set(groupMembers.map(m => m.任教班級))];
+                    units.forEach(unitName => {
+                        const unitMembers = groupMembers.filter(m => m.任教班級 === unitName);
+                        html += `<h3 class="sub-category-title">${unitName}</h3>`;
+                        html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 mb-8">`;
+                        unitMembers.forEach(t => { html += createTeacherCard(t); });
+                        html += `</div>`;
+                    });
+                } else {
+                    html += `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">`;
+                    groupMembers.forEach(t => { html += createTeacherCard(t); });
+                    html += `</div>`;
+                }
+
+                section.innerHTML = html;
+                container.appendChild(section);
+            });
+        }
+
+        window.onload = function() {
+            loadData();
+            const btn = document.getElementById('backToTop');
+            window.onscroll = () => {
+                btn.style.display = window.scrollY > 300 ? "flex" : "none";
+            };
+            btn.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+    </script>
+</body>
+</html>
